@@ -1,6 +1,6 @@
 # esp-sdr-bridge
 
-[![Demo video: ESP32-S3 SDR in SDR++ via the SpyServer bridge](https://img.youtube.com/vi/9M-mIbKxqZ4/hqdefault.jpg)](https://youtu.be/9M-mIbKxqZ4)
+[![Demo video: ESP32-S3 SDR in SDR++ via the SpyServer bridge](docs/video.jpg)](https://youtu.be/9M-mIbKxqZ4)
 
 *Demo video (YouTube)*
 
