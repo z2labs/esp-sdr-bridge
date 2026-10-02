@@ -36,6 +36,23 @@ SNR is tone power over the noise floor per FFT bin (8192-point Hann; 30.5 Hz bin
 
 The level is the same for every rate and format (the bridge keeps samples in FIR units), so switching in the client does not change calibration.
 
+## CW sweep, 1 MHz steps (SpyServer, int16, 250 kS/s, gain 60)
+
+VSG CW at -50 dBm, 40 kHz above each tuned frequency, 1 s per point after 1.5 s settling; 2205-2638 MHz measured so far (434 points, run stopped when the PC was moved), 0 sequence gaps.
+
+![cw sweep](cw_sweep_1mhz.png)
+
+| Band | SNR median (min) | Tone level | Floor |
+|---|---|---|---|
+| 2205-2400 MHz | 57.5 dB (54.9) | -41.7 dBFS | -99.7 dBFS/bin |
+| 2400-2485 MHz | 51.0 dB (28.2) | -49.0 dBFS | -101.0 dBFS/bin |
+| 2485-2600 MHz | 49.8 dB (29.2) | -53.0 dBFS | -103.0 dBFS/bin |
+| 2600-2638 MHz | 47.2 dB (45.1) | -55.7 dBFS | -103.1 dBFS/bin |
+
+- The receive gain at a fixed gain index falls smoothly by ~17 dB from 2.2 to 2.64 GHz (tone level plot); the SNR follows it, so a per-frequency gain correction can flatten the level but not the SNR.
+- The SNR dips and floor spikes in 2.40-2.50 GHz are live Wi-Fi/Bluetooth traffic in the lab (the floor is measured with the VSG on, in the whole passband).
+- The frequency error is -1.02 to -1.06 ppm (crystal) plus a ±0.1 ppm sawtooth repeating every few MHz: the fractional resolution of the PLL with 1 kHz `FOFS` steps. Below ±250 Hz at 2.4 GHz.
+
 ## Full-band sweep (rtl_tcp path, 5 MHz steps)
 
 See the README plot: SNR 56-59 dB from 2.2 to 2.4 GHz, front-end gain falling above ~2.45 GHz (about 48 dB SNR at 2.6 GHz, 40 dB at 2.8 GHz), Wi-Fi/BT traffic visible in 2.40-2.48 GHz, a PLL spur hump when the LO (tuned frequency - 4 MHz) is on a 20 MHz grid.

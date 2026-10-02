@@ -37,6 +37,8 @@ esp-sdr-bridge --port COM4 [--spyserver 0.0.0.0:5555] [--rtltcp 0.0.0.0:1234]
                [--freq 2450e6] [--gain 60] [--ppm 0] [--fake]
 ```
 
+**Remote use:** the bridge listens on all interfaces, so any device on the LAN can connect, e.g. SDR++ on an Android phone or tablet (SpyServer source, `<PC IP>:5555`) while the ESP32-S3 and the bridge stay at the PC. Allow the ports in the PC firewall; on an untrusted network bind to one interface with `--spyserver <IP>:5555`.
+
 `--fake` serves a synthetic tone without hardware (protocol tests). `tools/ss_client.py` is a minimal SpyServer client that measures rate, tone frequency, level and SNR for every rate and sample format.
 
 ## Measured
