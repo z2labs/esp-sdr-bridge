@@ -1,5 +1,9 @@
 # esp-sdr-bridge
 
+[![Demo video: ESP32-S3 SDR in SDR++ via the SpyServer bridge](https://img.youtube.com/vi/9M-mIbKxqZ4/hqdefault.jpg)](https://youtu.be/9M-mIbKxqZ4)
+
+*Demo video (YouTube)*
+
 Real IQ from an ESP32-S3 running [ESP-SDR](https://github.com/ESPARGOS/esp-sdr) into **SDR++**, **SDR#**, **GNU Radio**, gqrx and anything else that speaks **SpyServer** or **rtl_tcp**, over the plain USB cable.
 
 The ESP32-S3 samples the 2.4 GHz band at 16 MS/s; a two-stage decimating FIR (DDC) running on the second core with the S3 PIE SIMD instructions produces a gapless complex baseband stream, which this bridge serves on the network.
