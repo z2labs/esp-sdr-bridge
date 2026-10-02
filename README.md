@@ -24,7 +24,7 @@ Tuning range 2204 to 2804 MHz in 1 kHz steps. The bandwidth is limited by the S3
 
 ## Quick start
 
-1. Flash the ESP32-S3 with ESP-SDR firmware that has the `IQS` stream command (upstream pull request in preparation).
+1. Flash the ESP32-S3 with ESP-SDR firmware that has the `IQS` stream command: branch [`s3-iq-stream`](https://github.com/zodoczi/esp-sdr/tree/s3-iq-stream) (ESP-IDF 5.5, `idf.py -DIDF_TARGET=esp32s3 build flash`; upstream pull request to ESP-SDR planned).
 2. Run the bridge:
    - Windows: download `esp-sdr-bridge-windows-x64.exe` from [Releases](../../releases) and run `esp-sdr-bridge-windows-x64.exe --port COM4`
    - Linux / macOS: `pipx install git+https://github.com/z2labs/esp-sdr-bridge` then `esp-sdr-bridge --port /dev/ttyACM0`

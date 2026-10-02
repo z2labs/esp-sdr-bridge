@@ -9,7 +9,7 @@ Rates: 250 kS/s (8-bit link), 125 / 62.5 kS/s (16-bit link). Samples are kept in
 ESP-SDR: https://github.com/ESPARGOS/esp-sdr
 Turbo Mode developed by Zoltan Doczi from https://www.z2labs.io
 """
-import argparse, math, socket, struct, threading, time, zlib
+import argparse, math, queue, socket, struct, threading, time, zlib
 import numpy as np
 
 FS = 16_000_000                     # ring rate in IQ mode
@@ -51,7 +51,7 @@ class Device:
         self.s = serial.Serial(port, 2000000, timeout=0.05); time.sleep(0.4); self.s.reset_input_buffer()
         self.out = out; self.lock = threading.Lock(); self.want = None; self.cur = None
         self.freq = 2_450_000_000; self.gain = 60; self.rate = 250000; self.ppm = ppm; self.dc = 0j
-        self.stats = dict(frames=0, crc=0, gaps=0, lost=0); self.next_idx = None
+        self.stats = dict(frames=0, crc=0, gaps=0, lost=0); self.next_idx = None; self.fresh = True
         threading.Thread(target=self.run, daemon=True).start()
 
     def set(self, **kw):
@@ -90,7 +90,7 @@ class Device:
                       f"(dec {dec}, {bits}-bit link, shift {sh})", flush=True)
                 self.cmd(f"FREQ {mhz}"); self.cmd(f"FOFS {khz}"); self.cmd(f"GAIN MANUAL {g}")
                 self.s.write(f"IQS 0 {dec} {bits} {code} {sh} {MODE}\n".encode())
-                buf = b""; streaming = True; self.cur = want; self.next_idx = None
+                buf = b""; streaming = True; self.cur = want; self.next_idx = None; self.fresh = True
             d = self.s.read(65536)
             if not d: continue
             buf += d
@@ -104,9 +104,12 @@ class Device:
                 if len(buf) < i + L: buf = buf[i:]; break
                 blob = buf[i:i + L]; buf = buf[i + L:]
                 if zlib.crc32(blob[:-4]) != struct.unpack("<I", blob[-4:])[0]: self.stats["crc"] += 1; continue
-                if dd != RATES[self.cur[2]][1]: continue                # tail of the previous stream after a retune
+                if self.fresh:                  # new stream counts frames from 0: skip the old stream's tail
+                    if fr != 0 or dd != RATES[self.cur[2]][1]: continue
+                    self.fresh = False
                 if self.next_idx is not None and sidx != self.next_idx:
                     self.stats["gaps"] += 1; self.stats["lost"] += sidx - self.next_idx
+                    print(f"[dev] gap: frame {fr} index {sidx} expected {self.next_idx} (+{sidx - self.next_idx}) dec {dd} flags {fl} {time.strftime('%H:%M:%S')}", flush=True)
                 self.next_idx = sidx + ns; self.stats["frames"] += 1
                 a = np.frombuffer(blob[24:-4], np.int8 if bits == 8 else "<i2").astype(np.float32) * float(1 << sh)
                 z = a[0::2] + 1j * a[1::2]
@@ -146,14 +149,43 @@ SS_DEV_RTLSDR = 3            # SDR++ only knows Airspy One / HF+ / RTL-SDR; RTL-
 SS_SERIAL = 0xE5D3_5301
 
 
+class Tx:
+    """Per-client sender thread, so the device thread never waits for a slow client (a blocked
+    device thread stops reading USB and the S3 drops frames). Data is dropped when the queue
+    (~2 s) is full; SpyServer clients see that as a sequence gap."""
+    def __init__(self, c):
+        self.c = c; self.q = queue.Queue(maxsize=1024); self.dead = False; self.dropped = 0
+        threading.Thread(target=self.run, daemon=True).start()
+
+    def run(self):
+        try:
+            while True:
+                b = self.q.get()
+                if b is None: break
+                self.c.sendall(b)
+        except OSError:
+            pass
+        self.dead = True
+
+    def put(self, b, block=False):
+        if self.dead: raise OSError("client gone")
+        try: self.q.put(b, block=block, timeout=2.0 if block else None)
+        except queue.Full: self.dropped += 1
+
+    def close(self):
+        self.dead = True
+        try: self.q.put_nowait(None)
+        except queue.Full: pass
+
+
 def spyserver_client(c, addr, dev, sinks, info):
     print("[ss] client", addr, flush=True)
     st = dict(fmt=2, mode=1, on=False, seq=0, dig=0)
-    wl = threading.Lock()
+    wl = threading.Lock(); tx = Tx(c)
 
-    def send(mtype, stype, body, flags=0):
+    def send(mtype, stype, body, flags=0, block=True):
         with wl:
-            c.sendall(struct.pack("<5I", SS_PROTO, mtype | (flags << 16), stype, st["seq"], len(body)) + body)
+            tx.put(struct.pack("<5I", SS_PROTO, mtype | (flags << 16), stype, st["seq"], len(body)) + body, block)
             st["seq"] = (st["seq"] + 1) & 0xFFFFFFFF
 
     def sync():
@@ -166,11 +198,11 @@ def spyserver_client(c, addr, dev, sinks, info):
         if st["fmt"] == 1:      # uint8, digital gain in the header flags (client divides it out)
             D = int(round(6.0206 * (8 - out_shift(g))))
             u = v * (128 / 32768 * 10 ** (D / 20)) + 128 + (np.random.random(v.size) - np.random.random(v.size))
-            send(100, 1, np.clip(np.rint(u), 0, 255).astype(np.uint8).tobytes(), D)
+            send(100, 1, np.clip(np.rint(u), 0, 255).astype(np.uint8).tobytes(), D, block=False)
         elif st["fmt"] == 4:
-            send(103, 1, (v / 32768).astype("<f4").tobytes())
+            send(103, 1, (v / 32768).astype("<f4").tobytes(), block=False)
         else:
-            send(101, 1, np.clip(np.rint(v), -32768, 32767).astype("<i2").tobytes())
+            send(101, 1, np.clip(np.rint(v), -32768, 32767).astype("<i2").tobytes(), block=False)
 
     sinks.add(sink)
     try:
@@ -201,21 +233,22 @@ def spyserver_client(c, addr, dev, sinks, info):
                 send(2, 0, b"")
     except (OSError, struct.error):
         pass
-    sinks.remove(sink)
+    sinks.remove(sink); tx.close()
     try: c.close()
     except OSError: pass
-    print("[ss] client gone", addr, getattr(dev, "stats", {}), flush=True)
+    print("[ss] client gone", addr, getattr(dev, "stats", {}), "tx dropped", tx.dropped, flush=True)
 
 
 # ---------------------------------------------------------------- rtl_tcp
 def rtltcp_client(c, addr, dev, sinks, info):
     print("[rtl] client", addr, flush=True)
-    c.sendall(b"RTL0" + struct.pack(">II", 5, len(R820T_GAINS)))   # 5 = R820T
+    tx = Tx(c)
+    tx.put(b"RTL0" + struct.pack(">II", 5, len(R820T_GAINS)), block=True)   # 5 = R820T
 
     def sink(z, g):
         v = z.view(np.float32) / float(1 << out_shift(g))
         d = np.random.random(v.size) - np.random.random(v.size)    # TPDF: unbiased rounding around 127.5
-        c.sendall(np.clip(np.rint(v + 127.5 + d), 0, 255).astype(np.uint8).tobytes())
+        tx.put(np.clip(np.rint(v + 127.5 + d), 0, 255).astype(np.uint8).tobytes())
 
     sinks.add(sink)
     try:
@@ -230,8 +263,8 @@ def rtltcp_client(c, addr, dev, sinks, info):
             elif cmd == 0x0d: dev.set(gain=max(0, min(82, round(min(p, 28) / 28 * 82))))
     except (OSError, struct.error):
         pass
-    sinks.remove(sink)
-    print("[rtl] client gone", addr, getattr(dev, "stats", {}), flush=True)
+    sinks.remove(sink); tx.close()
+    print("[rtl] client gone", addr, getattr(dev, "stats", {}), "tx dropped", tx.dropped, flush=True)
 
 
 def listen(spec, handler, dev, sinks, info):

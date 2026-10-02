@@ -9,10 +9,11 @@ F = float(sys.argv[2]) if len(sys.argv) > 2 else 2450e6
 G = int(sys.argv[3]) if len(sys.argv) > 3 else 60
 T = float(sys.argv[4]) if len(sys.argv) > 4 else 2.0
 import os
+OFF = float(os.environ.get('OFF', 40e3)); DECS = [int(x) for x in os.environ.get('DECS', '').split(',') if x]
 if os.environ.get('VSG'):
     v = socket.create_connection(('127.0.0.1', 5124), timeout=20); vf = v.makefile('rwb')
-    for q in (':OUTPut:MODulation:STATe OFF', ':SOURce:POWer -50.00', ':SOURce:FREQuency %d' % int(F + 40e3), ':OUTPut:STATe ON'): vf.write((q + '\n').encode()); vf.flush()
-    print('VSG -50 dBm @ %.3f MHz' % ((F + 40e3) / 1e6))
+    for q in (':OUTPut:MODulation:STATe OFF', ':SOURce:POWer -50.00', ':SOURce:FREQuency %d' % int(F + OFF), ':OUTPut:STATe ON'): vf.write((q + '\n').encode()); vf.flush()
+    print('VSG -50 dBm @ %.3f MHz' % ((F + OFF) / 1e6))
 h, p = hp.rsplit(":", 1); c = socket.create_connection((h, int(p)), timeout=5)
 
 def cmd(t, body): c.sendall(struct.pack("<II", t, len(body)) + body)
@@ -30,7 +31,7 @@ def msg():
 cmd(0, struct.pack("<I", PROTO) + b"ss_client")
 t, _, _, _, b = msg(); di = struct.unpack("<12I", b); print("devinfo", di)
 t, _, _, _, b = msg(); print("sync", struct.unpack("<9I", b))
-for dec in range(di[10], di[4] + 1):
+for dec in (DECS or range(di[10], di[4] + 1)):
     for fmt in (2, 1, 4):
         sr = di[2] / (1 << dec)
         setting(100, fmt); setting(102, dec); setting(101, F); setting(0, 1); setting(2, G); setting(1, 1)
