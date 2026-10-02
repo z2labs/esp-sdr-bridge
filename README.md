@@ -72,3 +72,4 @@ Known effects:
 ## License
 
 GPL-3.0, same as ESP-SDR. Copyright (c) 2026 Zoltan Doczi.
+Detailed results, including an 87-minute soak test: [docs/MEASUREMENTS.md](docs/MEASUREMENTS.md)
