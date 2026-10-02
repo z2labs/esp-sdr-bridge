@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esp-sdr-bridge"
+dynamic = ["version"]
+description = "SpyServer + rtl_tcp bridge for ESP-SDR (ESP32-S3): real IQ over USB into SDR++, SDR#, GNU Radio"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Zoltan Doczi", email = "zoltan@z2labs.io" }]
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.22", "pyserial>=3.5"]
+classifiers = [
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Topic :: Communications :: Ham Radio",
+  "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://www.z2labs.io"
+Source = "https://github.com/z2labs/esp-sdr-bridge"
+"ESP-SDR firmware" = "https://github.com/ESPARGOS/esp-sdr"
+
+[project.scripts]
+esp-sdr-bridge = "esp_sdr_bridge.bridge:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "esp_sdr_bridge.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
