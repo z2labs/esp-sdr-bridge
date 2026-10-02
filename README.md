@@ -24,10 +24,16 @@ Tuning range 2204 to 2804 MHz in 1 kHz steps. The bandwidth is limited by the S3
 
 ## Quick start
 
-1. Flash the ESP32-S3 with ESP-SDR firmware that has the `IQS` stream command: branch [`s3-iq-stream`](https://github.com/zodoczi/esp-sdr/tree/s3-iq-stream) (ESP-IDF 5.5, `idf.py -DIDF_TARGET=esp32s3 build flash`; upstream pull request to ESP-SDR planned).
-2. Run the bridge:
-   - Windows: download `esp-sdr-bridge-windows-x64.exe` from [Releases](../../releases) and run `esp-sdr-bridge-windows-x64.exe --port COM4`
-   - Linux / macOS: `pipx install git+https://github.com/z2labs/esp-sdr-bridge` then `esp-sdr-bridge --port /dev/ttyACM0`
+1. Flash the ESP32-S3 with ESP-SDR firmware that has the `IQS` stream command. Download `esp-sdr-s3-iq-stream.bin` from [Releases](../../releases/latest) (one merged image, flash at offset `0x0`):
+   - in the browser, no install: [ESP Tool web flasher](https://espressif.github.io/esptool-js/) (Chrome/Edge), connect to the board's native USB port, address `0x0`, Program;
+   - or from the command line: `esptool --chip esp32s3 --after watchdog_reset write_flash 0x0 esp-sdr-s3-iq-stream.bin`.
+
+   If the board stays silent after flashing, it is still in the bootloader: press RESET or unplug and replug it.
+
+   Source: branch [`s3-iq-stream`](https://github.com/zodoczi/esp-sdr/tree/s3-iq-stream), upstream pull request [ESPARGOS/esp-sdr#4](https://github.com/ESPARGOS/esp-sdr/pull/4).
+2. Run the bridge (use the board's **native USB** port; on Linux it is `/dev/ttyACM0`):
+   - Windows: download `esp-sdr-bridge-windows-x64.exe` from [Releases](../../releases/latest) and run `esp-sdr-bridge-windows-x64.exe --port COM4`
+   - Linux / macOS: `pipx install git+https://github.com/z2labs/esp-sdr-bridge` then `esp-sdr-bridge --port /dev/ttyACM0`, or the `linux-x64` / `macos-arm64` binary from Releases (`chmod +x` first)
 3. Connect your SDR software:
    - **SDR++ / SDR#**: Source *SpyServer*, `localhost:5555`, sample bit depth *Int16*
    - **SDR++ / gqrx / GNU Radio**: Source *RTL-TCP*, `localhost:1234`
