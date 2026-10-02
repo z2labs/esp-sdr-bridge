@@ -56,3 +56,5 @@ VSG CW at -50 dBm, 40 kHz above each tuned frequency, 1 s per point after 1.5 s 
 ## Full-band sweep (rtl_tcp path, 5 MHz steps)
 
 See the README plot: SNR 56-59 dB from 2.2 to 2.4 GHz, front-end gain falling above ~2.45 GHz (about 48 dB SNR at 2.6 GHz, 40 dB at 2.8 GHz), Wi-Fi/BT traffic visible in 2.40-2.48 GHz, a PLL spur hump when the LO (tuned frequency - 4 MHz) is on a 20 MHz grid.
+
+PDF report: [ESP32-S3_IQ_bridge_measurements.pdf](ESP32-S3_IQ_bridge_measurements.pdf)
