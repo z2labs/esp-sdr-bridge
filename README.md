@@ -43,6 +43,8 @@ esp-sdr-bridge --port COM4 [--spyserver 0.0.0.0:5555] [--rtltcp 0.0.0.0:1234]
 
 ## Measured
 
+> 📄 **[Full measurement report (PDF)](docs/ESP32-S3_IQ_bridge_measurements.pdf)** · **[Detailed results: 91-minute soak test, 1 MHz CW sweep, PLL spur analysis](docs/MEASUREMENTS.md)**
+
 ESP32-S3 dev board, VSG CW at -50 dBm, 40 kHz above the tuned frequency, gain index 60:
 
 | Rate | Format | Rate measured | Tone SNR (per bin) |
